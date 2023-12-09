@@ -31,3 +31,7 @@ Download or clone the archive, and run as follows:
 ```
 python cytovs.py
 ```
+## Authors
+
+Dr. Florian Malard (florian.malard@gmail.com)
+Prof. Dr. Stéphanie Olivier-van Stichelen (solivier@mcw.edu)
