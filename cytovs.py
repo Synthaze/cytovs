@@ -187,8 +187,8 @@ class Application(tk.Frame):
 
         nodes.loc[nodes['HexNAc'] == 0, 'O-GlcNAc probability'] = 'No HexNAc'
         nodes.loc[(nodes['HexNAc'] > 0) & (nodes['Extracellular'] == 1), 'O-GlcNAc probability'] = 'Extracellular HexNAc'
-        nodes.loc[(nodes['HexNAc'] > 0) & (nodes['Intracellular'] == 1), 'O-GlcNAc probability'] = 'O-GlcNAcylated proteins'
-        nodes.loc[(nodes['HexNAc'] > 0) & (nodes['Intracellular'] == 1) & (nodes['PSM'] > self.cutoff_PSM), 'O-GlcNAc probability'] = 'Top O-GlcNAc Targets'
+        nodes.loc[(nodes['HexNAc'] > 0) & (nodes['Intracellular'] == 1) & (nodes['Extracellular'] == 0), 'O-GlcNAc probability'] = 'O-GlcNAcylated proteins'
+        nodes.loc[(nodes['HexNAc'] > 0) & (nodes['Intracellular'] == 1) & (nodes['Extracellular'] == 0) & (nodes['PSM'] > self.cutoff_PSM), 'O-GlcNAc probability'] = 'Top O-GlcNAc Targets'
 
         p4c.load_table_data(nodes, data_key_column='name', table='node', table_key_column='name')
 
