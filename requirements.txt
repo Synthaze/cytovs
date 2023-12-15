@@ -1,3 +1,4 @@
+setuptools
 py4cytoscape
 requests
 pandas

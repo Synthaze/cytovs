@@ -8,7 +8,7 @@ Email: [Dr. Florian Malard (florian.malard@gmail.com), Prof. Dr. Stéphanie Oliv
 """
 # Import necessary libraries
 import tkinter as tk
-from tkinter import filedialog, ttk
+from tkinter import filedialog, ttk, messagebox
 import pandas as pd
 import py4cytoscape as p4c
 import requests
@@ -146,7 +146,7 @@ class Application(tk.Frame):
 
         params = {
             'identifiers' : '\r'.join(self.proteins),
-            'limit' : 1,
+            'limit' : 0,
         }
 
         request_url = '/'.join([string_api_url, output_format, method])
@@ -159,6 +159,8 @@ class Application(tk.Frame):
 
     def process_cytoscape(self):
         # Rename columns, perform STRING database query, and process data in Cytoscape
+        messagebox.showinfo("Information", "Click OK to start, this can take a few minutes.")
+        
         self.data.rename(columns={'Protein Accessions':'queryItem'}, inplace=True)
         self.proteins = self.data['queryItem'].tolist()
         mapping = self.stringdb_mapping()
@@ -167,13 +169,21 @@ class Application(tk.Frame):
 
         # Perform STRING protein query in Cytoscape
         p4c.cytoscape_ping()
+        taxonName = data['taxonName'].tolist()[0]
         proteins = ','.join(proteins)
-        p4c.commands.commands_post(f'string protein query query={proteins} limit=0')
+        p4c.commands.commands_post(f'string protein query query="{proteins}" species="{taxonName}"')
         edges = p4c.get_all_edges()
         p4c.hide_edges(edges)
 
         # Retrieve and clean table
         nodes = p4c.get_table_columns()
+
+        nodes_list = nodes['stringdb::canonical name'].tolist()
+        data_list = data['queryItem'].tolist()
+        to_remove = [item for item in nodes_list if item not in data_list]
+        filtered_nodes = nodes[nodes['stringdb::canonical name'].isin(to_remove)]
+        
+        p4c.hide_nodes(filtered_nodes['SUID'].tolist())
 
         # Merge with data
         data.rename(columns={'stringId': 'name'}, inplace=True)
@@ -183,12 +193,20 @@ class Application(tk.Frame):
         nodes['Intracellular'] = nodes.apply(lambda row: any(row[col] > threshold for col, threshold in self.conditions['Intracellular'].items()), axis=1)
         nodes['Extracellular'] = nodes.apply(lambda row: any(row[col] > threshold for col, threshold in self.conditions['Extracellular'].items()), axis=1)
 
-        nodes['O-GlcNAc probability'] = 'Unknownn HexNAc'
+        nodes['O-GlcNAc probability'] = 'UnknownHexNAc'
 
-        nodes.loc[nodes['HexNAc'] == 0, 'O-GlcNAc probability'] = 'No HexNAc'
-        nodes.loc[(nodes['HexNAc'] > 0) & (nodes['Extracellular'] == 1), 'O-GlcNAc probability'] = 'Extracellular HexNAc'
-        nodes.loc[(nodes['HexNAc'] > 0) & (nodes['Intracellular'] == 1) & (nodes['Extracellular'] == 0), 'O-GlcNAc probability'] = 'O-GlcNAcylated proteins'
-        nodes.loc[(nodes['HexNAc'] > 0) & (nodes['Intracellular'] == 1) & (nodes['Extracellular'] == 0) & (nodes['PSM'] > self.cutoff_PSM), 'O-GlcNAc probability'] = 'Top O-GlcNAc Targets'
+        nodes.loc[nodes['HexNAc'] == 0, 'O-GlcNAc probability'] = 'NoHexNAc'
+        nodes.loc[(nodes['HexNAc'] > 0) & (nodes['Extracellular'] == 1), 'O-GlcNAc probability'] = 'ExtracellularHexNAc'
+        nodes.loc[(nodes['HexNAc'] > 0) & (nodes['Intracellular'] == 1) & (nodes['Extracellular'] == 0), 'O-GlcNAc probability'] = 'OGlcNAcylatedProteins'
+        nodes.loc[(nodes['HexNAc'] > 0) & (nodes['Intracellular'] == 1) & (nodes['Extracellular'] == 0) & (nodes['PSM'] > self.cutoff_PSM), 'O-GlcNAc probability'] = 'TopOGlcNAcTargets'
+
+        # Check oglcnac.mcw.edu
+        nodes['Found in oglcnac.mcw.edu'] = False
+        oglcnacdb = requests.get('https://www.oglcnac.mcw.edu/download/?oglcnac_organisms=All+species&oglcnac_format=csv&download_oglcnac=download_oglcnac', verify=False).text.splitlines()[1:]
+        _ids = [line.split(',')[0] for line in oglcnacdb]
+        for _id in data_list:
+            if _id in _ids:
+                nodes.loc[nodes['stringdb::canonical name'] == _id, 'Found in oglcnac.mcw.edu'] = True
 
         p4c.load_table_data(nodes, data_key_column='name', table='node', table_key_column='name')
 
@@ -197,7 +215,20 @@ class Application(tk.Frame):
 
         # Set Cytoscape style
         p4c.commands.commands_post('layout attributes-layout nodeAttribute="O-GlcNAc probability"')
-        style_name = p4c.import_visual_styles('style.xml')[0]
+
+        with open('style.xml', 'r') as msg:
+            style = msg.read()
+        
+        min_PSM = min(nodes['PSM'].tolist())
+        max_PSM = max(nodes['PSM'].tolist())
+        
+        style = style.replace('<continuousMappingPoint attrValue="1.0" equalValue="10.0" greaterValue="10.0" lesserValue="1.0"/>', f'<continuousMappingPoint attrValue="{min_PSM}" equalValue="10.0" greaterValue="10.0" lesserValue="1.0"/>')
+        style = style.replace('<continuousMappingPoint attrValue="1650.0" equalValue="200.0" greaterValue="1.0" lesserValue="200.0"/>', f'<continuousMappingPoint attrValue="{max_PSM}" equalValue="200.0" greaterValue="1.0" lesserValue="200.0"/>')
+
+        with open('.style.xml', 'w') as msg:
+            msg.write(style)
+
+        style_name = p4c.import_visual_styles('.style.xml')[0]
         p4c.set_visual_style(style_name)
 
         p4c.commands.commands_post('autoannotate annotate-clusterBoosted useClusterMaker=false clusterIdColumn="O-GlcNAc probability" labelColumn="O-GlcNAc probability"')
