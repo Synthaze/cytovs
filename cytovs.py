@@ -193,7 +193,7 @@ class Application(tk.Frame):
         to_remove = [item for item in nodes_list if item not in data_list]
         filtered_nodes = nodes[nodes['stringdb::canonical name'].isin(to_remove)]
         
-        p4c.hide_nodes(filtered_nodes['SUID'].tolist())
+ #       p4c.hide_nodes(filtered_nodes['SUID'].tolist())
 
         # Merge with data
         data.rename(columns={'stringId': 'name'}, inplace=True)
