@@ -13,6 +13,8 @@ import pandas as pd
 import py4cytoscape as p4c
 import requests
 import sys
+import time
+
 
 # Create a tkinter application
 class Application(tk.Frame):
@@ -138,24 +140,30 @@ class Application(tk.Frame):
         quit_button = tk.Button(self.master, text="Quit", command=self.master.destroy)
         quit_button.pack(side='right', padx=10, pady=10)
 
-    def stringdb_mapping(self):
-        # Perform mapping to STRING database
+    def stringdb_mapping(self, batch_size=1000):
         string_api_url = 'https://string-db.org/api'
         output_format = 'json'
         method = 'get_string_ids'
+        all_results = []
 
-        params = {
-            'identifiers' : '\r'.join(self.proteins),
-            'limit' : 0,
-        }
+        for i in range(0, len(self.proteins), batch_size):
+            print(f'Request string db API for proteins {i}..{i+batch_size}')
+            batch = self.proteins[i:i + batch_size]
+            params = {
+                'identifiers': '\r'.join(batch),
+                'limit': 0,
+            }
 
-        request_url = '/'.join([string_api_url, output_format, method])
-        results = requests.post(request_url, data=params)
+            request_url = '/'.join([string_api_url, output_format, method])
+            results = requests.post(request_url, data=params, timeout=600)
+            
+            if results.status_code == 200:
+                all_results.extend(results.json())
+            else:
+                raise Exception(f"Error querying STRING database: {results.status_code}")
 
-        if results.status_code == 200:
-            return pd.DataFrame(results.json())
-        else:
-            raise Exception(f"Error querying STRING database: {results.status_code}")
+        print('STRING db mapping done...')
+        return pd.DataFrame(all_results)
 
     def process_cytoscape(self):
         # Rename columns, perform STRING database query, and process data in Cytoscape
@@ -164,14 +172,16 @@ class Application(tk.Frame):
         self.data.rename(columns={'Protein Accessions':'queryItem'}, inplace=True)
         self.proteins = self.data['queryItem'].tolist()
         mapping = self.stringdb_mapping()
-        data = pd.merge(self.data, mapping).drop(['queryIndex'], axis=1).dropna(axis='columns')
+        data = pd.merge(self.data, mapping, left_on='queryItem', right_on='queryItem').drop(['queryIndex'], axis=1).dropna(axis='columns')
         proteins = data['stringId'].tolist()
 
         # Perform STRING protein query in Cytoscape
         p4c.cytoscape_ping()
         taxonName = data['taxonName'].tolist()[0]
         proteins = ','.join(proteins)
-        p4c.commands.commands_post(f'string protein query query="{proteins}" species="{taxonName}"')
+        print('Querying StringApp...')
+        p4c.commands.commands_post(f'string protein query query="{proteins}" cutoff=1.0 species="{taxonName}"')
+        print('Querying StringApp done...')
         edges = p4c.get_all_edges()
         p4c.hide_edges(edges)
 
@@ -179,7 +189,7 @@ class Application(tk.Frame):
         nodes = p4c.get_table_columns()
 
         nodes_list = nodes['stringdb::canonical name'].tolist()
-        data_list = data['queryItem'].tolist()
+        data_list = self.data['queryItem'].tolist()
         to_remove = [item for item in nodes_list if item not in data_list]
         filtered_nodes = nodes[nodes['stringdb::canonical name'].isin(to_remove)]
         
@@ -206,11 +216,11 @@ class Application(tk.Frame):
         _ids = [line.split(',')[0] for line in oglcnacdb]
         for _id in data_list:
             if _id in _ids:
-                nodes.loc[nodes['stringdb::canonical name'] == _id, 'Found in oglcnac.mcw.edu'] = True
+                nodes.loc[nodes['queryItem'] == _id, 'Found in oglcnac.mcw.edu'] = True
 
         p4c.load_table_data(nodes, data_key_column='name', table='node', table_key_column='name')
 
-        for col in ['stringdb::full name', 'stringdb::database identifier', '@id', 'preferredName', 'annotation', 'queryItem', 'query term', 'stringdb::STRING style', 'stringdb::enhancedLabel Passthrough', 'stringdb::namespace', 'ncbiTaxonid', 'taxonName']:
+        for col in ['stringdb::full name', 'stringdb::database identifier', '@id', 'preferredName', 'annotation', 'queryItem', 'stringdb::STRING style', 'stringdb::enhancedLabel Passthrough', 'stringdb::namespace', 'ncbiTaxonid', 'taxonName']:
             p4c.delete_table_column(col)
 
         # Set Cytoscape style
@@ -222,8 +232,8 @@ class Application(tk.Frame):
         min_PSM = min(nodes['PSM'].tolist())
         max_PSM = max(nodes['PSM'].tolist())
         
-        style = style.replace('<continuousMappingPoint attrValue="1.0" equalValue="10.0" greaterValue="10.0" lesserValue="1.0"/>', f'<continuousMappingPoint attrValue="{min_PSM}" equalValue="10.0" greaterValue="10.0" lesserValue="1.0"/>')
-        style = style.replace('<continuousMappingPoint attrValue="1650.0" equalValue="200.0" greaterValue="1.0" lesserValue="200.0"/>', f'<continuousMappingPoint attrValue="{max_PSM}" equalValue="200.0" greaterValue="1.0" lesserValue="200.0"/>')
+        style = style.replace('<continuousMappingPoint attrValue="0.0" equalValue="20.0" greaterValue="20.0" lesserValue="1.0"/>', f'<continuousMappingPoint attrValue="{min_PSM}" equalValue="20.0" greaterValue="20.0" lesserValue="1.0"/>')
+        style = style.replace('<continuousMappingPoint attrValue="35.0" equalValue="70.0" greaterValue="1.0" lesserValue="70.0"/>', f'<continuousMappingPoint attrValue="{max_PSM}" equalValue="70.0" greaterValue="1.0" lesserValue="70.0"/>')
 
         with open('.style.xml', 'w') as msg:
             msg.write(style)

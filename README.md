@@ -22,6 +22,8 @@ pip install -r requirements.txt
 
 Cytovs communicates with Cytoscape CyREST API through the py4cytoscape python module.
 
+If you are a MacOS 14 user, you may have problem with tkinter (GUI), see https://stackoverflow.com/questions/73056296/tkinter-on-mac-shows-up-as-a-black-screen to solve the issue.
+
 ## Usage
 
 Starts Cytoscape software and make sure you installed the stringApp and AutoAnnotate.
