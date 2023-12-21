@@ -220,7 +220,7 @@ class Application(tk.Frame):
 
         p4c.load_table_data(nodes, data_key_column='name', table='node', table_key_column='name')
 
-        for col in ['stringdb::full name', 'stringdb::database identifier', '@id', 'preferredName', 'annotation', 'queryItem', 'stringdb::STRING style', 'stringdb::enhancedLabel Passthrough', 'stringdb::namespace', 'ncbiTaxonid', 'taxonName']:
+        for col in ['stringdb::full name', 'stringdb::database identifier', '@id', 'preferredName', 'annotation', 'query term', 'stringdb::STRING style', 'stringdb::enhancedLabel Passthrough', 'stringdb::namespace', 'ncbiTaxonid', 'taxonName']:
             p4c.delete_table_column(col)
 
         # Set Cytoscape style
