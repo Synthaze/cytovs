@@ -4,6 +4,8 @@
 
 Cytovs is a simple python GUI program that is used to process CSV data derived from Mass-Spectrometry (MS) through Cytoscape API in combination with cytoscape stringApp and AutoAnnotate.
 
+![cytovs](cytovs.png)
+
 ## Requirements
 
 Cytoscape 3.10 or greater: https://cytoscape.org/download.html
