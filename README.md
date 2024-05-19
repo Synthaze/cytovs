@@ -1,6 +1,6 @@
 ### Cytovs - v0.1
 
-If you use *cytovs* in your academic work, please cite:
+If you use *cytovs* in your work, please cite:
 
 Malard F, Wulff-Fuentes E, Berendt R, Didier G and Olivier-Van Stichelen S. **Studying the O-GlcNAcome of human placentas using banked tissue samples**. *Glycobiology*, 34(4), (2024).
 
