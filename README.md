@@ -1,5 +1,9 @@
 ### Cytovs - v0.1
 
+If you use *cytovs* in your academic work, please cite:
+
+Malard F, Wulff-Fuentes E, Berendt R, Didier G and Olivier-Van Stichelen S. **Studying the O-GlcNAcome of human placentas using banked tissue samples**. *Glycobiology*, 34(4), (2024).
+
 ## Purpose
 
 Cytovs is a simple python GUI program that is used to process CSV data derived from Mass-Spectrometry (MS) through Cytoscape API in combination with cytoscape stringApp and AutoAnnotate.
