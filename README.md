@@ -2,7 +2,7 @@
 
 If you use *cytovs* in your work, please cite:
 
-Malard F, Wulff-Fuentes E, Berendt R, Didier G and Olivier-Van Stichelen S. **Studying the O-GlcNAcome of human placentas using banked tissue samples**. *Glycobiology*, 34(4), (2024).
+Luna S et al. **Studying the O-GlcNAcome of human placentas using banked tissue samples**. *Glycobiology*, 34(4), (2024).
 
 ## Purpose
 
